@@ -1,0 +1,40 @@
+---
+kind: pipeline
+name: test-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: build
+    image: registry.suse.com/bci/golang:1.19
+    commands:
+      - make test
+    when:
+      event:
+        - push
+        - pull_request
+---
+kind: pipeline
+name: release
+
+steps:
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --force --tags
+
+  - name: release
+    image: goreleaser/goreleaser:v1.15.1
+    environment:
+      GITHUB_TOKEN:
+        from_secret: release_github_token
+      REPO: rancher/goreleaser
+    commands:
+      - goreleaser release --clean
+    when:
+      event: tag
+
+depends_on:
+  - test-amd64
