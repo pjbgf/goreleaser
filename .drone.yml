@@ -1,0 +1,44 @@
+---
+kind: pipeline
+name: test
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: build-multi-arch
+    image: thegeeklab/drone-docker-buildx:23.0.1
+    privileged: true # Needs access to docker socket for buildx.
+    settings:
+      provenance: mode=max
+      platforms:
+        - linux/amd64
+        - linux/arm64
+---
+kind: pipeline
+name: release
+
+steps:
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --force --tags
+
+  - name: release
+    # The image below is needed only on the first release,
+    # after it can be replaced with itself: rancher/goreleaser.
+    image: quay.io/repository/paulinhu/goreleaser:v1.51.1 # rancher/goreleaser:v1.15.2
+    privileged: true # Needs access to docker socket for buildx.
+    environment:
+      GITHUB_TOKEN:
+        from_secret: release_github_token
+      REPO: rancher/goreleaser
+    commands:
+      - goreleaser release --clean
+    when:
+      branch: main
+      event: tag
+
+depends_on:
+  - test
