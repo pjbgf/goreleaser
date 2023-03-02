@@ -28,7 +28,7 @@ steps:
   - name: release
     # The image below is needed only on the first release,
     # after it can be replaced with itself: rancher/goreleaser.
-    image: quay.io/repository/paulinhu/goreleaser:v1.51.1 # rancher/goreleaser:v1.15.2
+    image: quay.io/paulinhu/goreleaser:v1.15.1 # rancher/goreleaser:v1.15.2
     privileged: true # Needs access to docker socket for buildx.
     environment:
       GITHUB_TOKEN:
