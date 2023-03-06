@@ -1,0 +1,72 @@
+project_name: goreleaser
+builds:
+- skip: true
+source:
+  rlcp: true
+  enabled: true
+  name_template: '{{ .ProjectName }}_{{ .Version }}_source_code'
+dockers:
+- image_templates:
+  - '{{ .Env.REPO }}:{{ .Tag }}-amd64'
+  dockerfile: Dockerfile
+  build_flag_templates:
+    - "--pull"
+    - "--build-arg=ARCH=linux/amd64"
+    - "--platform=linux/amd64"
+    - "--label=org.opencontainers.image.source={{ .GitURL }}"
+    - "--label=io.artifacthub.package.readme-url={{ .GitURL }}/blob/main/README.md"
+    - "--label=io.artifacthub.package.license=Apache-2.0"
+    - "--label=io.artifacthub.package.maintainers=[]"
+    - "--label=org.opencontainers.image.created={{ .Date }}"
+    - "--label=org.opencontainers.image.name={{ .ProjectName }}"
+    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+    - "--label=org.opencontainers.image.version={{ .Version }}"
+- image_templates:
+  - '{{ .Env.REPO }}:{{ .Tag }}-arm64'
+  dockerfile: Dockerfile
+  build_flag_templates:
+    - "--pull"
+    - "--build-arg=ARCH=linux/arm64"
+    - "--platform=linux/arm64"
+    - "--label=org.opencontainers.image.source={{ .GitURL }}"
+    - "--label=io.artifacthub.package.readme-url={{ .GitURL }}/blob/main/README.md"
+    - "--label=io.artifacthub.package.license=Apache-2.0"
+    - "--label=io.artifacthub.package.maintainers=[]"
+    - "--label=org.opencontainers.image.created={{ .Date }}"
+    - "--label=org.opencontainers.image.name={{ .ProjectName }}"
+    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+    - "--label=org.opencontainers.image.version={{ .Version }}"
+docker_manifests:
+- name_template: '{{ .Env.REPO }}:{{ .Tag }}'
+  image_templates:
+    - '{{ .Env.REPO }}:{{ .Tag }}-amd64'
+    - '{{ .Env.REPO }}:{{ .Tag }}-arm64'
+sboms:
+  # Generate SBOM for all source files.
+  - id: source
+    artifacts: source
+    documents:
+      - '{{ .ProjectName }}_{{ .Version }}_source.spdx.json'
+
+signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+    artifacts: checksum
+    output: true
+
+docker_signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    args:
+      - sign
+      - '{{ .Env.REPO }}:build-{{ .Env.DRONE_BUILD_NUMBER }}'
+    artifacts: manifests
+    output: true

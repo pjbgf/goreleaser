@@ -1,51 +1,24 @@
 project_name: goreleaser
 builds:
 - skip: true
-dockers:
-- image_templates:
-  - '{{ .Env.REPO }}:{{ .Tag }}-amd64'
-  dockerfile: Dockerfile
-  build_flag_templates:
-    - "--pull"
-    - "--build-arg=ARCH=linux/amd64"
-    - "--platform=linux/amd64"
-    - "--label=org.opencontainers.image.source={{ .GitURL }}"
-    - "--label=io.artifacthub.package.readme-url={{ .GitURL }}/blob/main/README.md"
-    - "--label=io.artifacthub.package.license=Apache-2.0"
-    - "--label=io.artifacthub.package.maintainers=[]"
-    - "--label=org.opencontainers.image.created={{ .Date }}"
-    - "--label=org.opencontainers.image.name={{ .ProjectName }}"
-    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-    - "--label=org.opencontainers.image.version={{ .Version }}"
-- image_templates:
-  - '{{ .Env.REPO }}:{{ .Tag }}-arm64'
-  dockerfile: Dockerfile
-  build_flag_templates:
-    - "--pull"
-    - "--build-arg=ARCH=linux/arm64"
-    - "--platform=linux/arm64"
-    - "--label=org.opencontainers.image.source={{ .GitURL }}"
-    - "--label=io.artifacthub.package.readme-url={{ .GitURL }}/blob/main/README.md"
-    - "--label=io.artifacthub.package.license=Apache-2.0"
-    - "--label=io.artifacthub.package.maintainers=[]"
-    - "--label=org.opencontainers.image.created={{ .Date }}"
-    - "--label=org.opencontainers.image.name={{ .ProjectName }}"
-    - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-    - "--label=org.opencontainers.image.version={{ .Version }}"
-docker_manifests:
-- name_template: '{{ .Env.REPO }}:{{ .Tag }}'
-  image_templates:
-    - '{{ .Env.REPO }}:{{ .Tag }}-amd64'
-    - '{{ .Env.REPO }}:{{ .Tag }}-arm64'
 source:
   rlcp: true
   enabled: true
   name_template: '{{ .ProjectName }}_{{ .Version }}_source_code'
 sboms:
+  # Generate SBOM for all source files.
   - id: source
     artifacts: source
     documents:
-      - '{{ .ProjectName }}_{{ .Version }}_sbom.spdx.json'
+      - '{{ .ProjectName }}_{{ .Version }}_source.spdx.json'
+  # Generate SBOM for all layers of the container image.
+  - artifacts: any
+    args: [
+      "{{ .Env.REPO }}:{{ .Env.DRONE_TAG }}", 
+      "--file", "{{ .ProjectName }}_{{ .Version }}_image.spdx.json", "--scope", "all-layers", "--output", "spdx-json"]
+    documents:
+      - '{{ .ProjectName }}_{{ .Version }}_image.spdx.json'
+
 signs:
   - cmd: cosign
     env:
@@ -57,13 +30,4 @@ signs:
       - '--output-signature=${signature}'
       - '${artifact}'
     artifacts: checksum
-    output: true
-docker_signs:
-  - cmd: cosign
-    env:
-      - COSIGN_EXPERIMENTAL=1
-    args:
-      - sign
-      - '${artifact}'
-    artifacts: all
     output: true
