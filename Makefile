@@ -2,6 +2,7 @@ REPO ?= local/goreleaser
 TAG ?= dev
 
 TARGET_PLATFORMS ?= linux/amd64,linux/arm64
+ATTESTATION ?= --attest type=sbom --attest type=provenance,mode=max
 
 .DEFAULT_GOAL := build
 
@@ -20,7 +21,7 @@ build: buildx-machine ## build container image to current platform
 push: buildx-machine  ## build container image to all target platforms and push to registry
 	docker buildx build -f Dockerfile \
 		--platform=$(TARGET_PLATFORMS) \
-		-t $(REPO):$(TAG) --push .
+		$(ATTESTATION) -t $(REPO):$(TAG) --push .
 
 buildx-machine: ## create buildx machine if not exists
 	@docker buildx ls | grep docker-container || \
